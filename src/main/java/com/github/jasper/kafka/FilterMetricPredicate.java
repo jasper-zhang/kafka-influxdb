@@ -14,7 +14,7 @@ import com.yammer.metrics.core.MetricProcessor;
 /**
  * Implementation of {@link MetricPredicate} which will <b>exclude<b/> metrics if they match
  * the given regular expression.<br>
- * It will also exclude the {@code kafka.common.AppInfo.Version} metric which causes warnings in graphite because of the invalid value.
+ * It will also exclude the {@code kafka.common.AppInfo.Version} metric which causes warnings because of the invalid value.
  * And it will exclude and remove all Gauges which are no longer available on the broker.
  */
 class FilterMetricPredicate implements MetricPredicate {

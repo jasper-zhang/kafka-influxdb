@@ -23,6 +23,13 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
      * influx with the specified period.
      *
      * @param period the period between successive outputs
+     * @param address the address of InfluxDB
+     * @param database the database to store the metric
+     * @param retentionPolicy  the retentionPolicy to store the metric
+     * @param username  the username to write into InfluxDB
+     * @param password  the password to write into InfluxDB
+     * @param consistency  consistency of write into InfluxDB, available value: one, any, all, quorum
+     * @param tags custom tags
      * @param unit   the time unit of {@code period}
      */
     public static void enable(long period, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, TimeUnit unit) {
@@ -35,6 +42,13 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
      *
      * @param metricsRegistry the metrics registry
      * @param period          the period between successive outputs
+     * @param address the address of InfluxDB
+     * @param database the database to store the metric
+     * @param retentionPolicy  the retentionPolicy to store the metric
+     * @param username  the username to write into InfluxDB
+     * @param password  the password to write into InfluxDB
+     * @param consistency  consistency of write into InfluxDB, available value: one, any, all, quorum
+     * @param tags custom tags
      * @param unit            the time unit of {@code period}
      */
     public static void enable(MetricsRegistry metricsRegistry, long period, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, TimeUnit unit) {
@@ -54,6 +68,9 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     private static final Logger LOG = LoggerFactory.getLogger(InfluxDBReporter.class);
 
     private static final MetricPredicate DEFAULT_METRIC_PREDICATE = MetricPredicate.ALL;
+
+//    protected final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
+//    public boolean printVMMetrics = true;
 
     private static final Map<String, InfluxDB.ConsistencyLevel> ConsistencyLevelMap = new HashMap<String, InfluxDB.ConsistencyLevel>(){{
         put("all", InfluxDB.ConsistencyLevel.ALL);
@@ -81,7 +98,14 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     private Context context;
 
     /**
-     * @param address, simple constructor，for the default metrics registry,
+     * simple constructor，for the default metrics registry
+     * @param address the address of InfluxDB
+     * @param database the database to store the metric
+     * @param retentionPolicy  the retentionPolicy to store the metric
+     * @param username  the username to write into InfluxDB
+     * @param password  the password to write into InfluxDB
+     * @param consistency  consistency of write into InfluxDB, available value: one, any, all, quorum
+     * @param tags custom tags
      */
     public InfluxDBReporter(String address, String database, String retentionPolicy, String username, String password, String consistency, String tags) {
         this(Metrics.defaultRegistry(), address,database,retentionPolicy,username,password,consistency,tags, MetricPredicate.ALL, Clock.defaultClock());
@@ -169,7 +193,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
             pointbuilder.addField(fieldName, (String) fieldValue);
         else
             return;
-        batchPoints.point(pointbuilder.build());
+        addPoint(pointbuilder.build());
     }
 
     @Override
@@ -179,7 +203,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
         pointbuilder.tag("metric_type", "counter");
 
         pointbuilder.addField("count", counter.count());
-        batchPoints.point(pointbuilder.build());
+        addPoint(pointbuilder.build());
 
     }
 
@@ -199,7 +223,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
         pointbuilder.addField("15MinuteRate", meter.fifteenMinuteRate());
 
 
-        batchPoints.point(pointbuilder.build());
+        addPoint(pointbuilder.build());
 
     }
 
@@ -224,7 +248,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
         pointbuilder.addField("p99", snapshot.get99thPercentile());
         pointbuilder.addField("p999", snapshot.get999thPercentile());
 
-        batchPoints.point(pointbuilder.build());
+        addPoint(pointbuilder.build());
 
     }
 
@@ -256,9 +280,8 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
         pointbuilder.addField("p999", snapshot.get999thPercentile());
 
 
-        batchPoints.point(pointbuilder.build());
+        addPoint(pointbuilder.build());
     }
-
 
     Point.Builder buildMetricsPoint(MetricName metricName, Context context) {
 
@@ -270,7 +293,6 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
 
         if (metricName.hasScope()) {
             String scope = metricName.getScope();
-
             List<String> scopes = Arrays.asList(scope.split("\\."));
             if (scopes.size() % 2 == 0) {
                 Iterator<String> iterator = scopes.iterator();

@@ -19,13 +19,13 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaInfluxDBMetricsReporter.class);
 
-    private static final String INFLUXDB_DEFAULT_ADDRESS = "localhost";
+    private static final String INFLUXDB_DEFAULT_ADDRESS = "http://localhost:8060";
     private static final String INFLUXDB_DEFAULT_USERNAME = "root";
     private static final String INFLUXDB_DEFAULT_PASSWORD = "root";
     private static final String INFLUXDB_DEFAULT_CONSISTENCY = "all";
     private static final String INFLUXDB_DEFAULT_DATABASE = "kafka";
     private static final String INFLUXDB_DEFAULT_RETENTIONPOLICY = "autogen";
-    private static final String INFLUXDB_DEFAULT_TAGS = "hostname:"+HostUtils.getHostName();
+    private static final String INFLUXDB_DEFAULT_TAGS = "hostname="+HostUtils.getHostName();
 
 
     private boolean initialized = false;
@@ -100,8 +100,7 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
 
     private FilteredInfluxDBReporter buildInfluxDBReporter() {
         FilteredInfluxDBReporter influxDBReporter = null;
-        try {
-            influxDBReporter = new FilteredInfluxDBReporter(
+        influxDBReporter = new FilteredInfluxDBReporter(
                     Metrics.defaultRegistry(),
                     influxDBAddress,
                     influxDBDatabase,
@@ -114,9 +113,6 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
                     metricDimensions,
                     Clock.defaultClock()
             );
-        } catch (IOException e) {
-            LOG.error("Unable to initialize InfluxDBReporter", e);
-        }
         return influxDBReporter;
     }
 }

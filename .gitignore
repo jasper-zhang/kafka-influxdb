@@ -1,3 +1,5 @@
 .idea/
 *.iml
 *.yml
+.DS_Store
+target/

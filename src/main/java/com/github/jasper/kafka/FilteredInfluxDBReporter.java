@@ -1,8 +1,6 @@
 package com.github.jasper.kafka;
 
 import com.yammer.metrics.core.*;
-import org.influxdb.InfluxDB;
-import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +20,18 @@ public class FilteredInfluxDBReporter extends InfluxDBReporter {
      * Creates a new {@link InfluxDBReporter}.
      *
      * @param metricsRegistry the metrics registry
-     * @param predicate       filters metrics to be reported
+     * @param address the address of InfluxDB
+     * @param database the database to store the metric
+     * @param retentionPolicy  the retentionPolicy to store the metric
+     * @param username  the username to write into InfluxDB
+     * @param password  the password to write into InfluxDB
+     * @param consistency  consistency of write into InfluxDB, available value: one, any, all, quorum
+     * @param tags custom tags
+     * @param predicate  filters metrics into be reported
      * @param dimensions      enum of enabled dimensions to include
      * @param clock           a {@link Clock} instance
-     * @throws IOException if there is an error connecting to the Graphite server
      */
-    public FilteredInfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, MetricPredicate predicate, EnumSet<Dimension> dimensions, Clock clock) throws IOException {
+    public FilteredInfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, MetricPredicate predicate, EnumSet<Dimension> dimensions, Clock clock) {
         super(metricsRegistry, address, database,retentionPolicy,username, password, consistency, tags, predicate, clock);
         this.dimensions = dimensions;
         LOGGER.debug("The following Metrics Dimensions will be sent {}", dimensions);
