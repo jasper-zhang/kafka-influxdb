@@ -312,7 +312,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
        Map<String, String> formatedTags = new HashMap<String, String>();
         String[] kvsArr = tags.split(",");
        for(String kvs: kvsArr) {
-          String[] kvArr = kvs.split("=");
+          String[] kvArr = kvs.split(":");
           formatedTags.put(kvArr[0], kvArr[1]);
        }
        return formatedTags;

@@ -25,7 +25,7 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
     private static final String INFLUXDB_DEFAULT_CONSISTENCY = "all";
     private static final String INFLUXDB_DEFAULT_DATABASE = "kafka";
     private static final String INFLUXDB_DEFAULT_RETENTIONPOLICY = "autogen";
-    private static final String INFLUXDB_DEFAULT_TAGS = "hostname="+HostUtils.getHostName();
+    private static final String INFLUXDB_DEFAULT_TAGS = "hostname:"+HostUtils.getHostName();
 
 
     private boolean initialized = false;
