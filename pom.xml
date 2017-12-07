@@ -7,7 +7,7 @@
   <groupId>com.github.jasper</groupId>
   <artifactId>kafka-influxdb</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.1</version>
+  <version>0.1</version>
   <name>Kafka metrics output to InfluxD</name>
 
   <dependencies>

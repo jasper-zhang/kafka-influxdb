@@ -10,6 +10,7 @@ Install On Broker
 4. Configure the broker (see the configuration section below)
 5. Restart the broker
 
+You can also download from the release, unzip the package and add them to the `libs/`, instead of do the 1,2,3 above.
 
 Configuration
 ------------
