@@ -50,7 +50,7 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
         if (initialized && !running) {
             reporter.start(pollingPeriodSecs, TimeUnit.SECONDS);
             running = true;
-            LOG.info("Started Kafka Graphite metrics reporter with polling period {} seconds", pollingPeriodSecs);
+            LOG.info("Started Kafka InfluxDB metrics reporter with polling period {} seconds", pollingPeriodSecs);
         }
     }
 
