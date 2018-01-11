@@ -60,7 +60,9 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
                 password,
                 consistency,
                 tags,
-                MetricPredicate.ALL, Clock.defaultClock());
+                Clock.defaultClock(),
+                VirtualMachineMetrics.getInstance()
+        );
         reporter.start(period, unit);
     }
 
@@ -68,9 +70,6 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     private static final Logger LOG = LoggerFactory.getLogger(InfluxDBReporter.class);
 
     private static final MetricPredicate DEFAULT_METRIC_PREDICATE = MetricPredicate.ALL;
-
-//    protected final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
-//    public boolean printVMMetrics = true;
 
     private static final Map<String, InfluxDB.ConsistencyLevel> ConsistencyLevelMap = new HashMap<String, InfluxDB.ConsistencyLevel>(){{
         put("all", InfluxDB.ConsistencyLevel.ALL);
@@ -81,11 +80,8 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
 
     private BatchPoints batchPoints;
 
-//    private String address;
     private String database;
     private String retentionPolicy;
-//    private String username;
-//    private String password;
     private InfluxDB.ConsistencyLevel consistencyLevel;
     private Map<String, String> tags;
 
@@ -93,9 +89,11 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
 
     private Clock clock;
 
-    private final MetricPredicate predicate;
-
     private Context context;
+
+    protected final VirtualMachineMetrics vm;
+
+    public boolean printVMMetrics = true;
 
     /**
      * simple constructor，for the default metrics registry
@@ -108,25 +106,22 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
      * @param tags custom tags
      */
     public InfluxDBReporter(String address, String database, String retentionPolicy, String username, String password, String consistency, String tags) {
-        this(Metrics.defaultRegistry(), address,database,retentionPolicy,username,password,consistency,tags, MetricPredicate.ALL, Clock.defaultClock());
+        this(Metrics.defaultRegistry(), address,database,retentionPolicy,username,password,consistency,tags, Clock.defaultClock(), VirtualMachineMetrics.getInstance());
     }
 
 
     /**
      * Creates a new {@link AbstractPollingReporter} instance.
      **/
-    public InfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, MetricPredicate predicate, Clock clock) {
+    public InfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, Clock clock, VirtualMachineMetrics vm) {
         super(metricsRegistry, "influx-reporter");
-//        this.address = address;
         this.database = database;
         this.retentionPolicy = retentionPolicy;
-//        this.username = username;
-//        this.password = password;
         this.consistencyLevel = getConsistencyLevel(consistency);
         this.tags = formatTags(tags);
         this.influxDBclient = InfluxDBFactory.connect(address, username, password);
         this.clock = clock;
-        this.predicate = predicate;
+        this.vm = vm;
         this.context = new Context() {
             @Override
             public long getTime() {
@@ -145,6 +140,10 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
                     .consistency(this.consistencyLevel)
                     .build();
             printRegularMetrics(context);
+            if (this.printVMMetrics) {
+                printVmMetrics(context);
+            }
+
             this.influxDBclient.write(batchPoints);
         } catch (Exception e) {
             LOG.error("Cannot send metrics to InfluxDB {}", e);
@@ -161,21 +160,68 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
             for (Map.Entry<MetricName, Metric> subEntry : entry.getValue().entrySet()) {
                 final MetricName metricName = subEntry.getKey();
                 final Metric metric = subEntry.getValue();
-                if (predicate.matches(metricName, metric)) {
-                    try {
-                        metric.processWith(this, subEntry.getKey(), context);
-                    } catch (Exception ignored) {
-                        LOG.error("Error printing regular metrics:", ignored);
-                    }
+                try {
+                    metric.processWith(this, subEntry.getKey(), context);
+                } catch (Exception ignored) {
+                    LOG.error("Error printing regular metrics:", ignored);
                 }
             }
+        }
+    }
+
+    protected void printVmMetrics(final Context context) {
+        Point.Builder pointbuilder;
+        pointbuilder = buildMetricsPointByMeasurement("jvm.memory.heap_usage", context);
+        pointbuilder.addField("value", vm.heapUsage());
+        addPoint(pointbuilder.build());
+
+        pointbuilder = buildMetricsPointByMeasurement("jvm.memory.non_heap_usage", context);
+        pointbuilder.addField("value", vm.nonHeapUsage());
+        addPoint(pointbuilder.build());
+
+        for (Map.Entry<String, Double> pool : vm.memoryPoolUsage().entrySet()) {
+            pointbuilder = buildMetricsPointByMeasurement("jvm.memory.memory_pool_usages", context);
+            pointbuilder.tag("pool", pool.getKey());
+            pointbuilder.addField("value", pool.getValue());
+            addPoint(pointbuilder.build());
+        }
+
+        pointbuilder = buildMetricsPointByMeasurement("jvm.daemon_thread_count", context);
+        pointbuilder.addField("value", vm.daemonThreadCount());
+        addPoint(pointbuilder.build());
+
+        pointbuilder = buildMetricsPointByMeasurement("jvm.thread_count", context);
+        pointbuilder.addField("value", vm.threadCount());
+        addPoint(pointbuilder.build());
+
+        pointbuilder = buildMetricsPointByMeasurement("jvm.uptime", context);
+        pointbuilder.addField("value", vm.uptime());
+        addPoint(pointbuilder.build());
+
+        pointbuilder = buildMetricsPointByMeasurement("jvm.fd_usage", context);
+        pointbuilder.addField("value", vm.fileDescriptorUsage());
+        addPoint(pointbuilder.build());
+
+        for (Map.Entry<Thread.State, Double> entry : vm.threadStatePercentages().entrySet()) {
+            pointbuilder = buildMetricsPointByMeasurement("jvm.memory.thread_states", context);
+            pointbuilder.tag("state", entry.getKey().toString().toLowerCase());
+            pointbuilder.addField("value", entry.getValue());
+            addPoint(pointbuilder.build());
+        }
+
+        for (Map.Entry<String, VirtualMachineMetrics.GarbageCollectorStats> entry : vm.garbageCollectors().entrySet()) {
+            pointbuilder = buildMetricsPointByMeasurement("jvm.gc", context);
+            pointbuilder.tag("gcName", entry.getKey());
+            pointbuilder.addField("time", entry.getValue().getTime(TimeUnit.MILLISECONDS));
+            pointbuilder.addField("runs", entry.getValue().getRuns());
+            addPoint(pointbuilder.build());
         }
     }
 
 
     public void processGauge(MetricName name, Gauge<?> gauge, Context context) throws Exception {
 
-        Point.Builder pointbuilder = buildMetricsPoint(name, context);
+        Point.Builder pointbuilder = buildMetricsPointByMetricName(name, context);
         pointbuilder.tag("metric_type", "gague");
 
         Object fieldValue = gauge.value();
@@ -199,7 +245,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     @Override
     public void processCounter(MetricName metricName, Counter counter, Context context) throws Exception {
 
-        Point.Builder pointbuilder = buildMetricsPoint(metricName, context);
+        Point.Builder pointbuilder = buildMetricsPointByMetricName(metricName, context);
         pointbuilder.tag("metric_type", "counter");
 
         pointbuilder.addField("count", counter.count());
@@ -211,7 +257,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     @Override
     public void processMeter(MetricName metricName, Metered meter, Context context) throws Exception {
 
-        Point.Builder pointbuilder = buildMetricsPoint(metricName, context);
+        Point.Builder pointbuilder = buildMetricsPointByMetricName(metricName, context);
         pointbuilder.tag("metric_type", "meter");
         pointbuilder.tag("eventType", meter.eventType());
 
@@ -232,7 +278,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     public void processHistogram(MetricName metricName, Histogram histogram, Context context) throws Exception {
         final Snapshot snapshot = histogram.getSnapshot();
 
-        Point.Builder pointbuilder = buildMetricsPoint(metricName, context);
+        Point.Builder pointbuilder = buildMetricsPointByMetricName(metricName, context);
         pointbuilder.tag("metric_type", "histogram");
 
         pointbuilder.addField("max", histogram.max());
@@ -255,7 +301,7 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
     public void processTimer(MetricName metricName, Timer timer, Context context) throws Exception {
         final Snapshot snapshot = timer.getSnapshot();
 
-        Point.Builder pointbuilder = buildMetricsPoint(metricName, context);
+        Point.Builder pointbuilder = buildMetricsPointByMetricName(metricName, context);
         pointbuilder.tag("metric_type", "timer");
 
 
@@ -283,7 +329,13 @@ public class InfluxDBReporter extends AbstractPollingReporter implements MetricP
         addPoint(pointbuilder.build());
     }
 
-    Point.Builder buildMetricsPoint(MetricName metricName, Context context) {
+    Point.Builder buildMetricsPointByMeasurement(String measurement, Context context) {
+        return Point.measurement(measurement)
+                .time(context.getTime(), TimeUnit.MILLISECONDS)
+                .tag(this.tags);
+    }
+
+    Point.Builder buildMetricsPointByMetricName(MetricName metricName, Context context) {
 
         Point.Builder pointbuilder = Point.measurement(metricName.getName())
                 .time(context.getTime(), TimeUnit.MILLISECONDS)

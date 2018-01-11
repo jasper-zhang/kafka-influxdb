@@ -22,13 +22,14 @@ Edit the `server.properties` file of your installation, activate the reporter by
 
 Here is a list of default properties used:
     
+    kafka.metrics.polling.interval.secs=10
     kafka.influxdb.metrics.address=http://localhost:8086
     kafka.influxdb.metrics.database=kafka
     kafka.influxdb.metrics.retentionPolicy=autogen
     kafka.influxdb.metrics.username=root
     kafka.influxdb.metrics.password=root
     kafka.influxdb.metrics.consistency=all
-    kafka.influxdb.metrics.tags=hostname:yourhostname
+    kafka.influxdb.metrics.tags=hostname:brokerhostname
 
 The `kafka.influxdb.metrics.tags` must format as `key1:value1,key2:value2,...`.
     

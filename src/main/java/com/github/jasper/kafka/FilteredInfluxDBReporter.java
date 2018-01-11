@@ -26,12 +26,11 @@ public class FilteredInfluxDBReporter extends InfluxDBReporter {
      * @param password  the password to write into InfluxDB
      * @param consistency  consistency of write into InfluxDB, available value: one, any, all, quorum
      * @param tags custom tags
-     * @param predicate  filters metrics into be reported
      * @param dimensions      enum of enabled dimensions to include
      * @param clock           a {@link Clock} instance
      */
-    public FilteredInfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, MetricPredicate predicate, EnumSet<Dimension> dimensions, Clock clock) {
-        super(metricsRegistry, address, database,retentionPolicy,username, password, consistency, tags, predicate, clock);
+    public FilteredInfluxDBReporter(MetricsRegistry metricsRegistry, String address, String database, String retentionPolicy, String username, String password, String consistency, String tags, EnumSet<Dimension> dimensions, Clock clock, VirtualMachineMetrics vm) {
+        super(metricsRegistry, address, database,retentionPolicy,username, password, consistency, tags, clock, vm);
         this.dimensions = dimensions;
         LOGGER.debug("The following Metrics Dimensions will be sent {}", dimensions);
     }
@@ -39,7 +38,7 @@ public class FilteredInfluxDBReporter extends InfluxDBReporter {
     @Override
     public void processMeter(MetricName metricName, Metered meter, Context context) throws Exception {
 
-        Point.Builder pointbuilder = super.buildMetricsPoint(metricName, context);
+        Point.Builder pointbuilder = super.buildMetricsPointByMetricName(metricName, context);
         pointbuilder.tag("metric_type", "meter");
         pointbuilder.tag("eventType", meter.eventType());
 

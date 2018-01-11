@@ -1,14 +1,13 @@
 package com.github.jasper.kafka;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import com.yammer.metrics.core.VirtualMachineMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Clock;
-import com.yammer.metrics.core.MetricPredicate;
 import java.util.EnumSet;
 
 import kafka.metrics.KafkaMetricsConfig;
@@ -39,8 +38,6 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
     private String influxDBRetentionPolicy = INFLUXDB_DEFAULT_RETENTIONPOLICY;
     private String influxDBTags = INFLUXDB_DEFAULT_TAGS;
 
-
-    private MetricPredicate metricPredicate = new FilterMetricPredicate();
     private EnumSet<Dimension> metricDimensions;
 
     @Override
@@ -78,15 +75,10 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
             influxDBDatabase = props.getString("kafka.influxdb.metrics.database", INFLUXDB_DEFAULT_DATABASE);
             influxDBRetentionPolicy = props.getString("kafka.influxdb.metrics.retentionPolicy", INFLUXDB_DEFAULT_RETENTIONPOLICY);
             influxDBTags = props.getString("kafka.influxdb.metrics.tags", INFLUXDB_DEFAULT_TAGS);
-            String excludeRegex = props.getString("kafka.influxdb.metrics.exclude.regex", null);
             metricDimensions = Dimension.fromProperties(props.props(), "kafka.influxdb.dimension.enabled.");
     
             LOG.debug("Initialize InfluxDBReporter [{},{},{}]", influxDBAddress, influxDBDatabase, influxDBRetentionPolicy);
 
-            if (excludeRegex != null) {
-                LOG.debug("Using regex [{}] for InfluxDBReporter", excludeRegex);
-                metricPredicate = new FilterMetricPredicate(excludeRegex);
-            }
             reporter = buildInfluxDBReporter();
 
             if (props.getBoolean("kafka.influxdb.metrics.reporter.enabled", false)) {
@@ -109,9 +101,9 @@ public class KafkaInfluxDBMetricsReporter implements KafkaMetricsReporter, Kafka
                     influxDBPassword,
                     influxDBConsistency,
                     influxDBTags,
-                    metricPredicate,
                     metricDimensions,
-                    Clock.defaultClock()
+                    Clock.defaultClock(),
+                    VirtualMachineMetrics.getInstance()
             );
         return influxDBReporter;
     }
